@@ -27,7 +27,7 @@ export default function GuestDashboard() {
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [isTrackingEnabled, setIsTrackingEnabled] = useState(false);
 
-  // 🔹 Récupération de l'adresse
+  //  Récupération de l'adresse
   const fetchAddress = useCallback(async () => {
     if (!code) {
       setError("Code manquant dans l'URL");
@@ -58,7 +58,7 @@ export default function GuestDashboard() {
     fetchAddress();
   }, [fetchAddress]);
 
-  // 🔹 Fonction pour centrer la carte sur une adresse
+  //  Fonction pour centrer la carte sur une adresse
   const flyToAddress = useCallback((addr: Address) => {
     if (!mapRef.current) return;
 
@@ -80,7 +80,7 @@ export default function GuestDashboard() {
     }
   }, [address, flyToAddress]);
 
-  // 🔹 Démarrer le suivi automatique lorsque la route est disponible
+  //  Démarrer le suivi automatique lorsque la route est disponible
   useEffect(() => {
     if (route && mapRef.current) {
       // Démarrer le suivi automatique
@@ -99,7 +99,7 @@ export default function GuestDashboard() {
     }
   }, [route]);
 
-  // 🔹 Génération de la route
+  //  Génération de la route
   const handleShowRoute = useCallback(() => {
     if (!navigator.geolocation) {
       alert("La géolocalisation n'est pas disponible dans votre navigateur.");
@@ -146,7 +146,7 @@ export default function GuestDashboard() {
     );
   }, [address, code]);
 
-  // 🔹 Arrêter le suivi manuellement
+  //  Arrêter le suivi manuellement
   const handleStopTracking = useCallback(() => {
     if (mapRef.current) {
       mapRef.current.stopTracking();
@@ -154,7 +154,7 @@ export default function GuestDashboard() {
     }
   }, []);
 
-  // 🔹 Reprendre le suivi manuellement
+  //  Reprendre le suivi manuellement
   const handleStartTracking = useCallback(() => {
     if (mapRef.current && route) {
       mapRef.current.startTracking();
@@ -196,7 +196,7 @@ export default function GuestDashboard() {
           zoom={11}
           selectedAddress={address}
           route={route?.geometry}
-          geolocateControl={true} // 🔹 Activer le contrôle de géolocalisation
+          geolocateControl={true} //  Activer le contrôle de géolocalisation
           onGeolocate={(position) => {
             // Mettre à jour la position utilisateur
             setUserLocation({
