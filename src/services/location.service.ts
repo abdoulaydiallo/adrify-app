@@ -19,20 +19,19 @@ export class LocationService {
   private static cachedTime: number | null = null;
   private static cacheDuration = 60000; // cache GPS valide pendant 1 min
 
-  /** Vérifie si la géolocalisation est disponible et en contexte sécurisé */
+  /** Vérifie si la géolocalisation est disponible */
   static isGeolocationAvailable(): boolean {
-    return "geolocation" in navigator && window.isSecureContext;
+    return "geolocation" in navigator;
   }
 
-  /** Obtenir la position GPS unique avec gestion des erreurs détaillée */
+  /** Obtenir la position GPS unique */
   static getGPSLocation(
-    timeout = 20000, // Augmenté pour mobile
-    maximumAge = 5000,
-    enableHighAccuracy = true
+    timeout = 10000,
+    maximumAge = 5000
   ): Promise<Coordinates & { accuracy: number }> {
     return new Promise((resolve, reject) => {
       if (!this.isGeolocationAvailable()) {
-        return reject(new Error("Géolocalisation non disponible ou non sécurisée (HTTPS requis)"));
+        return reject(new Error("Géolocalisation non disponible"));
       }
 
       navigator.geolocation.getCurrentPosition(
@@ -43,7 +42,7 @@ export class LocationService {
             accuracy: position.coords.accuracy,
           }),
         (err) => reject(err),
-        { enableHighAccuracy, timeout, maximumAge }
+        { enableHighAccuracy: true, timeout, maximumAge }
       );
     });
   }
@@ -62,11 +61,10 @@ export class LocationService {
     return R * c;
   }
 
-  /** Obtenir la position utilisateur avec cache, retry et fallback low accuracy */
+  /** Obtenir la position utilisateur avec cache et retry GPS */
   static async getUserLocation(
     retry = 3,
-    accuracyThreshold = 50,
-    lowAccuracyFallback = true
+    accuracyThreshold = 50
   ): Promise<Coordinates> {
     const now = Date.now();
 
@@ -79,58 +77,29 @@ export class LocationService {
       return this.cachedCoords;
     }
 
-    let attemptHigh = true;
-
-    const attemptLocation = async (): Promise<Coordinates> => {
-      try {
-        const position = await this.getGPSLocation(20000, 5000, attemptHigh);
-        if (position.accuracy <= accuracyThreshold) {
-          this.cachedCoords = { lat: position.lat, lng: position.lng };
-          this.cachedTime = now;
-          return this.cachedCoords;
-        } else {
-          console.warn("Position GPS ignorée (précision insuffisante)");
-          throw new Error("GPS imprécis");
-        }
-      } catch (err: any) {
-        console.warn(`GPS échoué (${attemptHigh ? 'high' : 'low'} accuracy), retries: ${retry}`, err);
-
-        if (err.code === 1) { // PERMISSION_DENIED
-          if (this.cachedCoords) return this.cachedCoords;
-          throw new Error("Permission de géolocalisation refusée");
-        }
-
-        if (err.code === 3 && retry > 0) { // TIMEOUT, retry with longer wait
-          await wait(1000 * Math.pow(2, 3 - retry));
-          return attemptLocation();
-        }
-
-        if (err.code === 2 && retry > 0) { // POSITION_UNAVAILABLE, retry
-          await wait(500 * Math.pow(2, 3 - retry));
-          return attemptLocation();
-        }
-
-        if (retry > 0) {
-          await wait(500 * Math.pow(2, 3 - retry));
-          retry--;
-          return attemptLocation();
-        }
-
-        if (attemptHigh && lowAccuracyFallback) {
-          attemptHigh = false;
-          console.log("Fallback to low accuracy");
-          return attemptLocation();
-        }
-
-        if (this.cachedCoords) return this.cachedCoords;
-        throw new Error("Impossible de récupérer la position de l'utilisateur");
+    try {
+      const position = await this.getGPSLocation();
+      if (position.accuracy <= accuracyThreshold) {
+        this.cachedCoords = { lat: position.lat, lng: position.lng };
+        this.cachedTime = now;
+        return this.cachedCoords;
+      } else {
+        console.warn("Position GPS ignorée (précision insuffisante)");
+        throw new Error("GPS imprécis");
       }
-    };
+    } catch (err) {
+      console.warn(`GPS échoué, retries restants: ${retry}`, err);
 
-    return attemptLocation();
+      if (retry > 0) {
+        await wait(500 * Math.pow(2, 3 - retry));
+        return this.getUserLocation(retry - 1, accuracyThreshold);
+      }
+
+      throw new Error("Impossible de récupérer la position de l'utilisateur");
+    }
   }
 
-  /** Démarrer le suivi en temps réel avec filtrage, throttling et retry sur erreur */
+  /** Démarrer le suivi en temps réel avec filtrage et throttling */
   static startTracking(
     onUpdate: (coords: Coordinates) => void,
     options: WatchOptions = {}
@@ -147,46 +116,39 @@ export class LocationService {
 
     const {
       enableHighAccuracy = true,
-      timeout = 20000, // Augmenté
+      timeout = 10000,
       maximumAge = 5000,
       accuracyThreshold = 50,
       minDistance = 20,
     } = options;
 
-    const watchHandler = () => {
-      this.watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          if (position.coords.accuracy > accuracyThreshold) {
-            console.warn("Position GPS ignorée (précision insuffisante)");
-            return;
-          }
+    this.watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        if (position.coords.accuracy > accuracyThreshold) {
+          console.warn("Position GPS ignorée (précision insuffisante)");
+          return;
+        }
 
-          const coords: Coordinates = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
+        const coords: Coordinates = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
 
-          if (
-            !this.lastCoords ||
-            this.getDistance(this.lastCoords, coords) > minDistance
-          ) {
-            this.lastCoords = coords;
-            this.cachedCoords = coords;
-            this.cachedTime = Date.now();
-            onUpdate(coords);
-          }
-        },
-        (err) => {
-          console.error("Erreur tracking GPS:", err);
-          if (err.code !== 1) { // Retry if not permission denied
-            setTimeout(watchHandler, 5000); // Retry after 5s
-          }
-        },
-        { enableHighAccuracy, timeout, maximumAge }
-      );
-    };
-
-    watchHandler();
+        if (
+          !this.lastCoords ||
+          this.getDistance(this.lastCoords, coords) > minDistance
+        ) {
+          this.lastCoords = coords;
+          this.cachedCoords = coords;
+          this.cachedTime = Date.now();
+          onUpdate(coords);
+        }
+      },
+      (err) => {
+        console.error("Erreur tracking GPS:", err);
+      },
+      { enableHighAccuracy, timeout, maximumAge }
+    );
   }
 
   /** Arrêter le suivi en temps réel */
