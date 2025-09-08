@@ -173,7 +173,7 @@ export default function DashboardPage() {
       />
 
       {/* Map Container */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative mt-4">
         <Mapbox
           ref={mapRef}
           addresses={addresses as any}

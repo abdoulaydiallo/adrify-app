@@ -29,65 +29,85 @@ export function Sidebar({
   };
 
   return (
-    <aside
-      className={`
-        fixed md:block top-75 md:top-18 left-0 z-40 w-full h-[100vh] sm:h-[85vh] md:h-full md:w-80 lg:w-96
-        bg-white rounded-t-2xl md:rounded-none shadow-lg md:shadow-none
-        transform transition-transform duration-300 ease-out
-        ${isOpen ? "translate-y-0" : "translate-y-full md:translate-y-0"}
-        ${className}
-      `}
-      style={{ touchAction: "none" }} // Améliore l'interaction tactile
-    >
-      {/* Poignée de glissement (mobile uniquement) */}
-      <div className="flex justify-center p-2 md:hidden" onClick={onClose}>
-        <div className="w-16 h-1 bg-gray-300 rounded-full transition-transform duration-200 hover:scale-105"></div>
-      </div>
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4 p-3 sm:p-4 border-b border-gray-200">
-        <div className="flex gap-4">
-          <MapIcon className="h-5 w-5" />
-          <h2 className="font-roboto text-base sm:text-lg font-medium text-gray-900">
-            Liste des Adresses
-          </h2>
+    <>
+      {/* Overlay */}
+      <div
+        className={`fixed inset-0 bg-black/40 z-30 transition-opacity duration-500 md:hidden ${
+          isOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+        onClick={onClose}
+      />
+
+      {/* Sidebar */}
+      <aside
+        className={`
+          fixed left-0 z-40 w-full md:w-80 lg:w-96
+          h-[70vh] md:h-full
+          bg-white rounded-t-2xl md:rounded-none shadow-lg md:shadow-none
+          transform transition-all duration-500 ease-in-out
+          ${
+            isOpen
+              ? "top-[30%] opacity-100 md:top-18 md:opacity-100"
+              : "top-[100%] opacity-0 md:top-18 md:opacity-100"
+          }
+          ${className}
+        `}
+        style={{ touchAction: "none" }}
+      >
+        {/* Header sticky */}
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-4 p-3 sm:p-4 border-b border-gray-200 bg-white">
+          <div className="flex gap-4">
+            <MapIcon className="h-5 w-5" />
+            <h2 className="font-roboto text-base sm:text-lg font-medium text-gray-900">
+              Liste des Adresses
+            </h2>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 md:hidden"
+          >
+            <X className="w-4 h-4 text-gray-600" />
+          </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          className="p-2 hover:bg-gray-100 md:hidden"
-        >
-          <X className="w-4 h-4 text-gray-600" />
-        </Button>
-      </div>
-      <ScrollArea className="">
-        <div className="p-3 sm:p-4 space-y-2">
-          {addresses.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 sm:py-12 text-center">
-              <span className="material-icons text-gray-300 text-3xl sm:text-4xl mb-2">
-                place
-              </span>
-              <h3 className="font-roboto font-medium text-gray-900 text-sm sm:text-base">
-                Aucune adresse
-              </h3>
-              <p className="text-xs sm:text-sm text-gray-500 max-w-48">
-                Ajoutez votre première adresse
-              </p>
-            </div>
-          ) : (
-            addresses
-              .slice()
-              .reverse()
-              .map((addr) => (
-                <AddressCard
-                  key={addr.id}
-                  address={addr}
-                  onSelect={handleAddressSelect}
-                />
-              ))
-          )}
-        </div>
-      </ScrollArea>
-    </aside>
+
+        {/* Liste scrollable avec padding bottom */}
+        <ScrollArea className="overflow-y-auto h-[calc(100%-56px)] pb-4 md:pb-8">
+          <div className="p-3 sm:p-4 space-y-4">
+            {addresses.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 sm:py-12 text-center">
+                <span className="material-icons text-gray-300 text-3xl sm:text-4xl mb-2">
+                  place
+                </span>
+                <h3 className="font-roboto font-medium text-gray-900 text-sm sm:text-base">
+                  Aucune adresse
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-500 max-w-48">
+                  Ajoutez votre première adresse
+                </p>
+              </div>
+            ) : (
+              <>
+                {addresses
+                  .slice()
+                  .reverse()
+                  .map((addr) => (
+                    <AddressCard
+                      key={addr.id}
+                      address={addr}
+                      onSelect={handleAddressSelect}
+                    />
+                  ))}
+                {/* Spacer pour le dernier item */}
+                <div className="h-8 md:h-12" />
+              </>
+            )}
+          </div>
+        </ScrollArea>
+      </aside>
+    </>
   );
 }
