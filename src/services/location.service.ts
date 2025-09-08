@@ -47,6 +47,19 @@ export class LocationService {
     });
   }
 
+  /** Fallback IP (via un service externe) */
+  private static async getIPLocation(): Promise<Coordinates> {
+    try {
+      const res = await fetch("https://ipapi.co/json/");
+      if (!res.ok) throw new Error("Échec IP API");
+      const data = await res.json();
+      return { lat: data.latitude, lng: data.longitude };
+    } catch (err) {
+      console.error("Erreur fallback IP:", err);
+      throw new Error("Impossible de récupérer la position par IP");
+    }
+  }
+
   /** Distance entre deux coordonnées en mètres */
   private static getDistance(c1: Coordinates, c2: Coordinates): number {
     const R = 6371000;
@@ -61,7 +74,7 @@ export class LocationService {
     return R * c;
   }
 
-  /** Obtenir la position utilisateur avec cache et retry GPS */
+  /** Obtenir la position utilisateur avec cache, retry GPS, et fallback IP */
   static async getUserLocation(
     retry = 3,
     accuracyThreshold = 50
@@ -95,7 +108,12 @@ export class LocationService {
         return this.getUserLocation(retry - 1, accuracyThreshold);
       }
 
-      throw new Error("Impossible de récupérer la position de l'utilisateur");
+      // fallback IP
+      console.warn("Fallback sur géolocalisation IP");
+      const ipCoords = await this.getIPLocation();
+      this.cachedCoords = ipCoords;
+      this.cachedTime = now;
+      return ipCoords;
     }
   }
 
