@@ -1,10 +1,10 @@
 "use client";
 
-import React, {
-  useRef,
+import {
   useEffect,
-  useCallback,
   useState,
+  useRef,
+  useCallback,
   useImperativeHandle,
   forwardRef,
 } from "react";
@@ -48,7 +48,6 @@ export interface MapboxRef {
   updateUserPulsePosition: (lnglat: [number, number]) => void;
 }
 
-// Fonction utilitaire pour convertir en nombre en toute sécurité
 const safeParseFloat = (
   value: string | number | null | undefined,
   defaultValue: number
@@ -95,19 +94,17 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
       null
     );
 
-    // États et références pour le suivi utilisateur et le marker pulsant
     const [isTrackingUser, setIsTrackingUser] = useState(false);
     const userLocationRef = useRef<mapboxgl.LngLat | null>(null);
     const userPulseMarkerRef = useRef<mapboxgl.Marker | null>(null);
     const [showUserPulse, setShowUserPulse] = useState(false);
 
-    // Exposer les méthodes via la ref
     useImperativeHandle(
       ref,
       () => ({
         flyTo: (newCenter: [number, number], newZoom?: number) => {
           if (mapRef.current) {
-            setIsTrackingUser(false); // Désactiver le suivi lors d'un flyTo manuel
+            setIsTrackingUser(false);
             mapRef.current.flyTo({
               center: newCenter,
               zoom: newZoom,
@@ -142,7 +139,6 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
       [isTrackingUser]
     );
 
-    // Annule toute animation en cours
     const cancelCurrentAnimation = useCallback(() => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
@@ -153,28 +149,24 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
       }
     }, []);
 
-    // Nettoyer tous les marqueurs
     const clearAllMarkers = useCallback(() => {
       Object.values(markersRef.current).forEach((marker) => marker.remove());
       markersRef.current = {};
     }, []);
 
-    // Fonction pour créer le marker pulsant de position utilisateur
     const createUserPulseMarker = useCallback(() => {
       const el = document.createElement("div");
-      el.className = "user-pulse-marker";
+      el.className =
+        "relative w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center";
       el.innerHTML = `
-        <div class="pulse-dot"></div>
-        <div class="pulse-ring"></div>
-        <div class="pulse-ring" style="animation-delay: 1s"></div>
-        <div class="pulse-ring" style="animation-delay: 2s"></div>
+        <div class="absolute w-3 h-3 rounded-full bg-[#1A73E8] z-10 animate-[pulse-dot_2s_infinite] shadow-[0_0_0_8px_rgba(26,115,232,0.3)]"></div>
+        <div class="absolute w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-[#1A73E8] opacity-0 animate-[pulse-ring_3s_infinite]"></div>
+        <div class="absolute w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-[#1A73E8] opacity-0 animate-[pulse-ring_3s_1s_infinite]"></div>
+        <div class="absolute w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-[#1A73E8] opacity-0 animate-[pulse-ring_3s_2s_infinite]"></div>
       `;
-      el.style.width = "40px";
-      el.style.height = "40px";
       return el;
     }, []);
 
-    // Fonction pour afficher le marker pulsant
     const showUserPulseMarker = useCallback(() => {
       if (!mapRef.current || !userLocationRef.current) return;
 
@@ -190,7 +182,6 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
       setShowUserPulse(true);
     }, [createUserPulseMarker]);
 
-    // Fonction pour cacher le marker pulsant
     const hideUserPulseMarker = useCallback(() => {
       if (userPulseMarkerRef.current) {
         userPulseMarkerRef.current.remove();
@@ -199,14 +190,11 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
       setShowUserPulse(false);
     }, []);
 
-    // Fonction pour créer ou mettre à jour les marqueurs
     const updateMarkers = useCallback(() => {
       if (!mapRef.current || !isMapLoaded) return;
 
-      // Créer un Set des IDs d'adresses actuelles
       const currentAddressIds = new Set(addresses.map((addr) => addr.id));
 
-      // Supprimer les marqueurs qui ne sont plus dans les adresses
       Object.keys(markersRef.current).forEach((id) => {
         if (!currentAddressIds.has(id)) {
           markersRef.current[id].remove();
@@ -214,36 +202,31 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
         }
       });
 
-      // Ajouter ou mettre à jour les marqueurs
       addresses.forEach((addr) => {
         if (!addr.latitude || !addr.longitude) return;
 
-        // Utilisation de safeParseFloat pour gérer les types
         const lng = safeParseFloat(addr.longitude, -13.5784);
         const lat = safeParseFloat(addr.latitude, 9.6412);
 
         if (markersRef.current[addr.id]) {
-          // Mettre à jour la position du marqueur existant
           markersRef.current[addr.id].setLngLat([lng, lat]);
         } else {
-          // Créer un nouveau marqueur
           const color =
             addr.is_validated === 1
-              ? "#10B981"
+              ? "#34A853"
               : addr.is_validated === 0
-              ? "#EF4444"
-              : "#F59E0B";
+              ? "#EA4335"
+              : "#FBBC05";
 
           const marker = new mapboxgl.Marker({ color })
             .setLngLat([lng, lat])
             .addTo(mapRef.current!);
 
-          // Ajouter l'événement de clic
           marker.getElement().addEventListener("click", () => {
             if (onMarkerClick) {
               onMarkerClick(addr);
             } else {
-              showPopup(addr);
+              //showPopup(addr);
             }
           });
 
@@ -252,13 +235,11 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
       });
     }, [addresses, isMapLoaded, onMarkerClick]);
 
-    // Fonction pour partager une adresse
     const handleShareAddress = useCallback(
       async (address: Address) => {
         if (onShareAddress) {
           onShareAddress(address);
         } else {
-          // Fallback: copier le lien dans le presse-papier
           const shareText = `${address.building_type || "Adresse"}: ${[
             address.house_number,
             address.street_name,
@@ -277,16 +258,15 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
               });
             } else {
               await navigator.clipboard.writeText(shareText);
-              // Afficher un message de confirmation temporaire
               if (popupRef.current) {
                 const popupElement = popupRef.current.getElement();
                 const shareBtn = popupElement?.querySelector(".share-btn");
                 if (shareBtn) {
-                  const originalText = shareBtn.innerHTML;
                   shareBtn.innerHTML =
-                    '<span class="copied-text">Copié!</span>';
+                    '<span class="text-green-600 font-semibold">Copié !</span>';
                   setTimeout(() => {
-                    shareBtn.innerHTML = "<span>Partager</span>";
+                    shareBtn.innerHTML =
+                      '<span class="text-[#202124] text-[10px] sm:text-xs">Partager</span>';
                   }, 2000);
                 }
               }
@@ -299,22 +279,18 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
       [onShareAddress]
     );
 
-    // Fonction pour afficher le popup avec le style compact
     const showPopup = useCallback(
       (addr: Address) => {
         if (!mapRef.current) return;
 
-        // Fermer le popup existant
         if (popupRef.current) {
           popupRef.current.remove();
           popupRef.current = null;
         }
 
-        // Utilisation de safeParseFloat pour les coordonnées
         const lng = safeParseFloat(addr.longitude, -13.5784);
         const lat = safeParseFloat(addr.latitude, 9.6412);
 
-        // Calcul de l'adresse complète
         const fullAddress = [
           addr.house_number,
           addr.street_name,
@@ -324,7 +300,6 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
           .filter(Boolean)
           .join(", ");
 
-        // Déterminer l'icône de type
         const typeIcon =
           addr.address_type === "résidentielle"
             ? "home"
@@ -332,7 +307,6 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
             ? "building"
             : "map-pin";
 
-        // Statut de validation
         const validationStatus =
           addr.is_validated === 1
             ? "validated"
@@ -340,7 +314,6 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
             ? "rejected"
             : "pending";
 
-        // Icône de statut
         const statusIcon =
           validationStatus === "validated"
             ? "check-circle"
@@ -348,72 +321,73 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
             ? "clock"
             : "x-circle";
 
-        // Couleur de statut
         const statusColor =
           validationStatus === "validated"
-            ? "text-emerald-500"
+            ? "text-[#34A853]"
             : validationStatus === "pending"
-            ? "text-amber-500"
-            : "text-red-500";
+            ? "text-[#FBBC05]"
+            : "text-[#EA4335]";
 
-        // Date formatée
         const formattedDate = new Date(addr.created_at).toLocaleDateString(
           "fr-FR"
         );
 
-        // HTML pour le popup style compact
         const html = `
-        <div class="mapbox-popup compact">
-          <div class="popup-content">
-            <div class="compact-header">
-              <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100">
+          <div class="p-3 sm:p-4 bg-white rounded-xl shadow-md max-w-[260px] sm:max-w-[300px] font-roboto">
+            <div class="flex justify-between items-start mb-2 sm:mb-3">
+              <div class="flex items-center gap-2 sm:gap-3">
+                <div class="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-[#F1F3F4] rounded-lg">
                   ${
                     typeIcon === "home"
-                      ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>'
+                      ? '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 sm:w-5 h-4 sm:h-5 text-[#202124]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>'
                       : typeIcon === "building"
-                      ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M12 6h.01"></path><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path></svg>'
-                      : '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>'
+                      ? '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 sm:w-5 h-4 sm:h-5 text-[#202124]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M12 6h.01"></path><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path></svg>'
+                      : '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 sm:w-5 h-4 sm:h-5 text-[#202124]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>'
                   }
                 </div>
                 <div class="flex-1 min-w-0">
-                  <h3 class="truncate font-semibold text-gray-900 text-sm">
+                  <h3 class="truncate font-medium text-[#202124] text-xs sm:text-sm">
                     ${addr.building_type || "Adresse"}
                   </h3>
-                  <p class="truncate text-xs text-gray-600">${fullAddress}</p>
+                  <p class="truncate text-[#5F6368] text-[10px] sm:text-xs">${fullAddress}</p>
                 </div>
               </div>
               <div class="flex flex-col items-end gap-1">
-                ${
-                  validationStatus === "validated"
-                    ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>'
-                    : validationStatus === "pending"
-                    ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>'
-                    : '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>'
-                }
-                <span class="text-xs text-gray-400">${formattedDate}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 ${statusColor}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  ${
+                    statusIcon === "check-circle"
+                      ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>'
+                      : statusIcon === "clock"
+                      ? '<circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>'
+                      : '<circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line>'
+                  }
+                </svg>
+                <span class="text-[10px] text-[#5F6368]">${formattedDate}</span>
               </div>
             </div>
-            
-            <div class="compact-actions mt-3 flex justify-between">
-              <button class="action-btn view-btn" data-address-id="${addr.id}">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <div class="flex justify-between gap-1 sm:gap-2">
+              <button class="view-btn flex flex-col items-center gap-1 px-2 sm:px-3 py-1.5 bg-[#F1F3F4] rounded-lg text-[#202124] text-[10px] sm:text-xs font-medium hover:bg-[#E8F0FE] hover:text-[#1A73E8] transition-all duration-200" data-address-id="${
+                addr.id
+              }">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                   <circle cx="12" cy="12" r="3"></circle>
                 </svg>
                 <span>Voir</span>
               </button>
-              <button class="action-btn verify-btn" data-address-id="${
+              <button class="verify-btn flex flex-col items-center gap-1 px-2 sm:px-3 py-1.5 bg-[#F1F3F4] rounded-lg text-[#202124] text-[10px] sm:text-xs font-medium hover:bg-[#E6F4EA] hover:text-[#34A853] transition-all duration-200" data-address-id="${
                 addr.id
               }">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                   <polyline points="22 4 12 14.01 9 11.01"></polyline>
                 </svg>
                 <span>Vérifier</span>
               </button>
-              <button class="action-btn share-btn" data-address-id="${addr.id}">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <button class="share-btn flex flex-col items-center gap-1 px-2 sm:px-3 py-1.5 bg-[#F1F3F4] rounded-lg text-[#202124] text-[10px] sm:text-xs font-medium hover:bg-[#E8F0FE] hover:text-[#1A73E8] transition-all duration-200" data-address-id="${
+                addr.id
+              }">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
                   <polyline points="16 6 12 2 8 6"></polyline>
                   <line x1="12" y1="2" x2="12" y2="15"></line>
@@ -422,39 +396,31 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
               </button>
             </div>
           </div>
-        </div>
-      `;
+        `;
 
         popupRef.current = new mapboxgl.Popup({
           closeOnClick: true,
-          maxWidth: "320px",
-          className: "custom-mapbox-popup",
+          maxWidth: "300px",
         })
           .setLngLat([lng, lat])
           .setHTML(html)
           .addTo(mapRef.current);
 
-        // Ajouter les événements aux boutons après que le popup soit rendu
         setTimeout(() => {
           const popupElement = popupRef.current?.getElement();
           if (popupElement) {
-            // Bouton Voir
             popupElement
               .querySelector(".view-btn")
               ?.addEventListener("click", (e) => {
                 e.stopPropagation();
                 onViewAddress?.(addr);
               });
-
-            // Bouton Vérifier
             popupElement
               .querySelector(".verify-btn")
               ?.addEventListener("click", (e) => {
                 e.stopPropagation();
                 onVerifyAddress?.(addr.id as any);
               });
-
-            // Bouton Partager
             popupElement
               .querySelector(".share-btn")
               ?.addEventListener("click", (e) => {
@@ -473,11 +439,9 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
       ]
     );
 
-    // Mettre à jour ou créer la route
     const updateRoute = useCallback(() => {
       if (!mapRef.current || !isMapLoaded || !route) return;
 
-      // Vérifier si la carte est complètement chargée
       if (!mapRef.current.isStyleLoaded()) {
         pendingRouteRef.current = route;
         return;
@@ -486,14 +450,11 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
       const map = mapRef.current;
 
       try {
-        // Vérifier si la source existe déjà
         const existingSource = map.getSource(routeSourceId);
 
         if (existingSource) {
-          // Mettre à jour la source existante
           (existingSource as mapboxgl.GeoJSONSource).setData(route);
         } else {
-          // Ajouter une nouvelle source et layer
           map.addSource(routeSourceId, {
             type: "geojson",
             data: route,
@@ -508,7 +469,7 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
               "line-cap": "round",
             },
             paint: {
-              "line-color": "#FF5722",
+              "line-color": "#1A73E8",
               "line-width": 4,
               "line-opacity": 0.7,
             },
@@ -521,7 +482,6 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
       }
     }, [route, isMapLoaded]);
 
-    // Supprimer la route
     const removeRoute = useCallback(() => {
       if (!mapRef.current || !isMapLoaded) return;
 
@@ -536,7 +496,6 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
       pendingRouteRef.current = null;
     }, [isMapLoaded]);
 
-    // Initialisation de la carte
     const initializeMap = useCallback(() => {
       if (!mapContainerRef.current || mapRef.current) return;
 
@@ -553,149 +512,9 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
 
       mapRef.current = map;
 
-      // Ajouter le CSS personnalisé pour les popups et le marker pulsant
-      const style = document.createElement("style");
-      style.textContent = `
-        .custom-mapbox-popup .mapboxgl-popup-content {
-          padding: 0;
-          border-radius: 12px;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-          overflow: hidden;
-        }
-        
-        .mapbox-popup {
-          padding: 0;
-          width: 280px;
-          max-width: 100%;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-        
-        .mapbox-popup.compact .popup-content {
-          padding: 16px;
-        }
-        
-        .compact-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 12px;
-        }
-        
-        .compact-actions {
-          display: flex;
-          gap: 8px;
-        }
-        
-        .action-btn {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 4px;
-          padding: 8px;
-          border: none;
-          border-radius: 8px;
-          font-size: 11px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          background: #f8fafc;
-          color: #374151;
-          min-width: 60px;
-        }
-        
-        .action-btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        
-        .action-btn svg {
-          width: 16px;
-          height: 16px;
-        }
-        
-        .view-btn:hover { background: #e0f2fe; color: #0369a1; }
-        .verify-btn:hover { background: #dcfce7; color: #16a34a; }
-        .share-btn:hover { background: #e0e7ff; color: #4f46e5; }
-        
-        .copied-text {
-          color: #16a34a;
-          font-weight: 600;
-        }
-
-        /* Style pour l'indicateur de suivi actif */
-        .mapboxgl-ctrl-geolocate.mapboxgl-ctrl-geolocate-active .mapboxgl-ctrl-icon {
-          background-color: #3b82f6;
-          color: white;
-        }
-
-        .mapboxgl-ctrl-geolocate.mapboxgl-ctrl-geolocate-active .mapboxgl-ctrl-icon:hover {
-          background-color: #2563eb;
-        }
-
-        /* Styles pour le marker pulsant utilisateur */
-        .user-pulse-marker {
-          position: relative;
-          width: 40px;
-          height: 40px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        
-        .pulse-dot {
-          width: 12px;
-          height: 12px;
-          border-radius: 50%;
-          background-color: #3b82f6;
-          position: relative;
-          z-index: 2;
-          box-shadow: 0 0 0 rgba(59, 130, 246, 0.4);
-          animation: pulse-dot 2s infinite;
-        }
-        
-        .pulse-ring {
-          position: absolute;
-          width: 40px;
-          height: 40px;
-          border: 2px solid #3b82f6;
-          border-radius: 50%;
-          opacity: 0;
-          animation: pulse-ring 3s infinite;
-        }
-        
-        @keyframes pulse-dot {
-          0% { 
-            transform: scale(1);
-            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
-          }
-          70% {
-            transform: scale(1.1);
-            box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
-          }
-          100% { 
-            transform: scale(1);
-            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
-          }
-        }
-        
-        @keyframes pulse-ring {
-          0% { 
-            transform: scale(0.5);
-            opacity: 1;
-          }
-          100% { 
-            transform: scale(1.5);
-            opacity: 0;
-          }
-        }
-      `;
-      document.head.appendChild(style);
-
-      // Configuration des contrôles
       map.addControl(new mapboxgl.NavigationControl(), "top-right");
       map.addControl(new mapboxgl.FullscreenControl(), "top-right");
 
-      // Gestion de la géolocalisation
       if (geolocateControl) {
         geolocateControlRef.current = new mapboxgl.GeolocateControl({
           positionOptions: { enableHighAccuracy: true },
@@ -710,7 +529,6 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
             e.coords.latitude
           );
 
-          // Mettre à jour le marker pulsant
           if (
             showUserPulse &&
             userPulseMarkerRef.current &&
@@ -719,7 +537,6 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
             userPulseMarkerRef.current.setLngLat(userLocationRef.current);
           }
 
-          // Si on suit l'utilisateur ET une route est disponible
           if (isTrackingUser && route) {
             map.flyTo({
               center: [e.coords.longitude, e.coords.latitude],
@@ -731,12 +548,10 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
           onGeolocate?.(userLocationRef.current);
         });
 
-        // Événement lorsque la géolocalisation démarre
         geolocateControlRef.current.on("trackuserlocationstart", () => {
           setIsTrackingUser(true);
         });
 
-        // Événement lorsque la géolocalisation s'arrête
         geolocateControlRef.current.on("trackuserlocationend", () => {
           setIsTrackingUser(false);
         });
@@ -744,7 +559,6 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
         map.addControl(geolocateControlRef.current, "bottom-right");
       }
 
-      // Gestion du clic sur la carte
       if (onClick) {
         map.on("click", (e) => {
           onClick(e.lngLat);
@@ -753,8 +567,6 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
 
       map.on("load", () => {
         setIsMapLoaded(true);
-
-        // Animation initiale
         cancelCurrentAnimation();
         animationRef.current = requestAnimationFrame(() => {
           map.flyTo({
@@ -765,23 +577,18 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
           });
         });
 
-        // Ajouter les marqueurs après le chargement
         updateMarkers();
-
-        // Ajouter la route si elle existe
         if (route) {
           updateRoute();
         }
       });
 
-      // Gérer le rechargement du style
       map.on("styledata", () => {
         if (pendingRouteRef.current) {
           updateRoute();
         }
       });
 
-      // Nettoyage des ressources lors du démontage
       return () => {
         cancelCurrentAnimation();
         clearAllMarkers();
@@ -794,10 +601,6 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
         if (mapRef.current) {
           mapRef.current.remove();
           mapRef.current = null;
-        }
-        // Nettoyer le style ajouté
-        if (style.parentNode) {
-          style.parentNode.removeChild(style);
         }
       };
     }, [
@@ -816,13 +619,11 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
       showUserPulse,
     ]);
 
-    // Effet pour initialiser la carte
     useEffect(() => {
       const cleanup = initializeMap();
       return cleanup;
     }, [initializeMap]);
 
-    // Mise à jour du centre (ne s'exécute pas si le suivi est activé)
     useEffect(() => {
       if (!mapRef.current || !isMapLoaded || isTrackingUser) return;
 
@@ -837,14 +638,12 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
       });
     }, [center, isMapLoaded, cancelCurrentAnimation, isTrackingUser]);
 
-    // Mise à jour des marqueurs lorsque les adresses changent
     useEffect(() => {
       if (isMapLoaded) {
         updateMarkers();
       }
     }, [addresses, isMapLoaded, updateMarkers]);
 
-    // Mise à jour de la route
     useEffect(() => {
       if (!isMapLoaded) return;
 
@@ -855,15 +654,11 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
       }
     }, [route, isMapLoaded, updateRoute, removeRoute]);
 
-    // Si une adresse est sélectionnée depuis Sidebar → popup
     useEffect(() => {
       if (selectedAddress && isMapLoaded) {
-        showPopup(selectedAddress);
-
-        // Centrer la carte sur l'adresse sélectionnée
+        //showPopup(selectedAddress);
         const lng = safeParseFloat(selectedAddress.longitude, -13.5784);
         const lat = safeParseFloat(selectedAddress.latitude, 9.6412);
-
         mapRef.current?.flyTo({
           center: [lng, lat],
           essential: true,
@@ -872,7 +667,6 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
       }
     }, [selectedAddress, isMapLoaded, showPopup]);
 
-    // Nettoyage
     useEffect(() => {
       return () => {
         cancelCurrentAnimation();
@@ -889,12 +683,10 @@ export const Mapbox = forwardRef<MapboxRef, MapboxProps>(
     return (
       <div
         ref={mapContainerRef}
-        className={`mapbox-container ${className}`}
-        style={{
-          ...style,
-          opacity: isMapLoaded ? 1 : 0,
-          transition: "opacity 300ms ease",
-        }}
+        className={`w-full h-full opacity-0 transition-opacity duration-300 ${
+          isMapLoaded ? "opacity-100" : ""
+        } ${className}`}
+        style={style}
       />
     );
   }

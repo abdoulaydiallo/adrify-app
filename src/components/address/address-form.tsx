@@ -305,16 +305,13 @@ export function AddressForm({
   return (
     <motion.form
       onSubmit={form.handleSubmit(onSubmit)}
-      className="w-full mx-auto bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-3xl p-8 border-white/20 dark:border-gray-700/20 space-y-6"
+      className="w-full mx-auto bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-3xl px-8 border-white/20 dark:border-gray-700/20 space-y-6"
       initial="hidden"
       animate="visible"
       exit="exit"
       variants={formVariants}
     >
       <div className="text-center mb-4">
-        <motion.div className="mx-auto mb-2 w-16 h-16 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-          <Camera className="w-8 h-8 text-white" />
-        </motion.div>
         <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
           {isUpdate ? "Modifier l'adresse" : "Nouvelle adresse"}
         </h2>

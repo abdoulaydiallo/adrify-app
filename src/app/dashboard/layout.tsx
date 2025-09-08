@@ -10,7 +10,7 @@ export default function DashboardLayout({
     <div className="min-h-screen">
       {/* Header spécifique au dashboard */}
       <Header />
-      <div className="pt-20 flex h-[calc(100vh)]">{children}</div>
+      <div className="pt-14 flex h-[calc(100vh)]">{children}</div>
     </div>
   );
 }

@@ -8,6 +8,8 @@ import { Address } from "@/types/address";
 import { AuthService } from "@/services/auth.service";
 import { ERROR_CODES, ServiceError } from "@/services/errors.service";
 import { GuestSidebar } from "@/components/layout/guest-sidebar";
+import { Button } from "@/components/ui/button";
+import { Map } from "lucide-react";
 
 export default function GuestDashboard() {
   const params = useParams();
@@ -26,6 +28,7 @@ export default function GuestDashboard() {
   const [route, setRoute] = useState<any>(null);
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [isTrackingEnabled, setIsTrackingEnabled] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   //  Récupération de l'adresse
   const fetchAddress = useCallback(async () => {
@@ -169,6 +172,19 @@ export default function GuestDashboard() {
 
   return (
     <div className="w-full max-h-[calc(100vh - 200px)] flex">
+      {/* Mobile Controls */}
+      <div className="fixed bottom-12 sm:bottom-4 right-3 sm:right-4 z-30 md:hidden flex gap-4">
+        <Button
+          onClick={() => setIsSidebarOpen(true)}
+          className="h-12 w-12 sm:h-1 sm:w-10 md:h-15 md:w-15 rounded-full bg-white shadow-lg hover:bg-blue-50 transition-all duration-300"
+          variant="ghost"
+          size="icon"
+        >
+          <Map className="w-4 sm:w-5 h-4 sm:h-5 text-gray-700" />
+        </Button>
+        
+       
+      </div>
       {/* Sidebar avec adresse + itinéraire */}
       <GuestSidebar
         address={address}
@@ -178,10 +194,13 @@ export default function GuestDashboard() {
         onStopTracking={handleStopTracking}
         onStartTracking={handleStartTracking}
         loadingRoute={loadingRoute}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        className=""
       />
 
       {/* Carte */}
-      <div className="flex-1">
+      <div className="flex-1 mt-5">
         <Mapbox
           ref={mapRef}
           addresses={address ? [address] : []}
@@ -196,7 +215,6 @@ export default function GuestDashboard() {
           zoom={11}
           selectedAddress={address}
           route={route?.geometry}
-          geolocateControl={true} //  Activer le contrôle de géolocalisation
           onGeolocate={(position) => {
             // Mettre à jour la position utilisateur
             setUserLocation({
