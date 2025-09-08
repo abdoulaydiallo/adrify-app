@@ -10,11 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, MapPin, Plus, Search, Map } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-type DashboardPageProps = {
-  className?: string;
-};
 
-export default function DashboardPage({ className = "" }: DashboardPageProps) {
+
+export default function DashboardPage() {
   const router = useRouter();
   const { addresses, fetchAddresses, isLoading, isError, error } =
     useAddresses();
@@ -113,7 +111,7 @@ export default function DashboardPage({ className = "" }: DashboardPageProps) {
   }
 
   return (
-    <main className={`flex flex-1 h-[calc(100vh - 2rem)] overflow-hidden ${className}`}>
+    <main className={`flex flex-1 h-[calc(100vh - 2rem)] overflow-hidden`}>
       {/* Mobile Search Bar */}
       {isSearchOpen && (
         <div className="fixed top-14 left-0 right-0 z-30 md:hidden bg-white/95 rounded-b-xl shadow-lg px-3 py-2 sm:p-3">
