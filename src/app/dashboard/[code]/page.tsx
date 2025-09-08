@@ -10,10 +10,12 @@ import { ERROR_CODES, ServiceError } from "@/services/errors.service";
 import { GuestSidebar } from "@/components/layout/guest-sidebar";
 import { Button } from "@/components/ui/button";
 import { Map } from "lucide-react";
+import { LocationService, Coordinates } from "@/services/location.service";
+import { RouteService } from "@/services/route.service";
 
 export default function GuestDashboard() {
   const params = useParams();
-  const code = params?.code;
+  const code = params?.code as string;
 
   const mapRef = useRef<MapboxRef>(null);
 
@@ -21,33 +23,28 @@ export default function GuestDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [userLocation, setUserLocation] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
+  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [route, setRoute] = useState<any>(null);
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [isTrackingEnabled, setIsTrackingEnabled] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  //  Récupération de l'adresse
+  // --- Récupération de l'adresse ---
   const fetchAddress = useCallback(async () => {
     if (!code) {
       setError("Code manquant dans l'URL");
       setIsLoading(false);
       return;
     }
-
     try {
       const data = await AuthService.fetchWithoutAuth(
         `/guest/addresses/${code}`
       );
-      if (!data || !data.address) {
+      if (!data?.address)
         throw new ServiceError(
           ERROR_CODES.INTERNAL_SERVER_ERROR,
           "Adresse introuvable"
         );
-      }
       setAddress(data.address);
     } catch (err: any) {
       console.error("Erreur fetchAddress:", err);
@@ -61,7 +58,7 @@ export default function GuestDashboard() {
     fetchAddress();
   }, [fetchAddress]);
 
-  //  Fonction pour centrer la carte sur une adresse
+  // --- Centrer la carte sur l'adresse ---
   const flyToAddress = useCallback((addr: Address) => {
     if (!mapRef.current) return;
 
@@ -78,114 +75,68 @@ export default function GuestDashboard() {
   }, []);
 
   useEffect(() => {
-    if (address) {
-      flyToAddress(address);
-    }
+    if (address) flyToAddress(address);
   }, [address, flyToAddress]);
 
-  //  Démarrer le suivi automatique lorsque la route est disponible
-  useEffect(() => {
-    if (route && mapRef.current) {
-      // Démarrer le suivi automatique
-      mapRef.current.startTracking();
-      setIsTrackingEnabled(true);
-
-      // Optionnel: Arrêter le suivi après un certain temps (ex: 30 secondes)
-      const timeout = setTimeout(() => {
-        if (mapRef.current) {
-          mapRef.current.stopTracking();
-          setIsTrackingEnabled(false);
-        }
-      }, 30000);
-
-      return () => clearTimeout(timeout);
-    }
-  }, [route]);
-
-  //  Génération de la route
-  const handleShowRoute = useCallback(() => {
-    if (!navigator.geolocation) {
-      alert("La géolocalisation n'est pas disponible dans votre navigateur.");
-      return;
-    }
-
+  // --- Génération de l'itinéraire ---
+  const handleShowRoute = useCallback(async () => {
     setLoadingRoute(true);
+    try {
+      const start = await LocationService.getUserLocation();
+      setUserLocation(start);
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const start = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
-        setUserLocation(start);
+      if (!address) throw new Error("Adresse introuvable");
 
-        if (!address) return;
-
-        try {
-          const url = `/guest/addresses/${code}/route?latitude=${start.lat}&longitude=${start.lng}`;
-          const data = await AuthService.fetchWithoutAuth(url, {
-            method: "GET",
-          });
-
-          if (data && data.route) {
-            setRoute(data.route);
-            // Ne plus centrer automatiquement sur l'adresse - le suivi s'occupe de ça
-          } else {
-            alert("Impossible de générer l'itinéraire.");
-          }
-        } catch (err: any) {
-          console.error("Erreur route API:", err);
-          alert(err.message || "Erreur lors de la génération de l'itinéraire");
-        } finally {
-          setLoadingRoute(false);
-        }
-      },
-      (err) => {
-        console.error("Erreur géolocalisation:", err);
-        alert("Impossible de récupérer votre position.");
-        setLoadingRoute(false);
-      },
-      { enableHighAccuracy: true }
-    );
+      const routeData = await RouteService.fetchRoute(code!, start);
+      setRoute(routeData);
+    } catch (err: any) {
+      console.error("Erreur itinéraire:", err);
+      alert(
+        err.message || "Impossible de récupérer la position ou l'itinéraire."
+      );
+    } finally {
+      setLoadingRoute(false);
+    }
   }, [address, code]);
 
-  //  Arrêter le suivi manuellement
+  // --- Gestion tracking ---
+  const handleStartTracking = useCallback(() => {
+    if (!route || isTrackingEnabled) return; // ne lancer qu'une fois
+
+    LocationService.startTracking((coords) => {
+      setUserLocation(coords); // met à jour la position live
+      mapRef.current?.flyTo([coords.lng, coords.lat], 15);
+    });
+
+    setIsTrackingEnabled(true);
+  }, [route, isTrackingEnabled]);
+
   const handleStopTracking = useCallback(() => {
-    if (mapRef.current) {
-      mapRef.current.stopTracking();
-      setIsTrackingEnabled(false);
-    }
+    LocationService.stopTracking();
+    setIsTrackingEnabled(false);
   }, []);
 
-  //  Reprendre le suivi manuellement
-  const handleStartTracking = useCallback(() => {
-    if (mapRef.current && route) {
-      mapRef.current.startTracking();
-      setIsTrackingEnabled(true);
-    }
-  }, [route]);
-
+  // --- Affichage ---
   if (isLoading) return <Loader />;
   if (error) return <div className="text-red-500 p-4">{error}</div>;
   if (!address)
     return <div className="text-gray-700 p-4">Adresse introuvable</div>;
 
   return (
-    <div className="w-full max-h-[calc(100vh - 200px)] flex">
+    <div className="w-full min-h-[calc(100vh-200px)] flex">
       {/* Mobile Controls */}
       <div className="fixed bottom-12 sm:bottom-4 right-3 sm:right-4 z-30 md:hidden flex gap-4">
         <Button
           onClick={() => setIsSidebarOpen(true)}
-          className="h-12 w-12 sm:h-1 sm:w-10 md:h-15 md:w-15 rounded-full bg-white shadow-lg hover:bg-blue-50 transition-all duration-300"
+          className="h-12 w-12 rounded-full bg-white shadow-lg hover:bg-blue-50 transition-all duration-300"
           variant="ghost"
           size="icon"
         >
-          <Map className="w-4 sm:w-5 h-4 sm:h-5 text-gray-700" />
+          <Map className="w-5 h-5 text-gray-700" />
         </Button>
-        
-       
       </div>
-      {/* Sidebar avec adresse + itinéraire */}
+
+      {/* Sidebar */}
       <GuestSidebar
         address={address}
         route={route}
@@ -196,7 +147,6 @@ export default function GuestDashboard() {
         loadingRoute={loadingRoute}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
-        className=""
       />
 
       {/* Carte */}
@@ -215,13 +165,9 @@ export default function GuestDashboard() {
           zoom={11}
           selectedAddress={address}
           route={route?.geometry}
-          onGeolocate={(position) => {
-            // Mettre à jour la position utilisateur
-            setUserLocation({
-              lat: position.lat,
-              lng: position.lng,
-            });
-          }}
+          onGeolocate={(position) =>
+            setUserLocation({ lat: position.lat, lng: position.lng })
+          }
         />
       </div>
     </div>
