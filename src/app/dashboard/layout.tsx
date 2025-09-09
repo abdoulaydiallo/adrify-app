@@ -7,10 +7,14 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen">
-      {/* Header spécifique au dashboard */}
-      <Header />
-      <div className="pt-14 flex h-[calc(100vh)]">{children}</div>
-    </div>
+<div className="min-h-screen flex flex-col">
+  {/* Header */}
+  <Header />
+
+  {/* Zone contenu qui prend le reste de l’écran */}
+  <div className="flex-1 max-h-[90vh] overflow-hidden">
+    {children}
+  </div>
+</div>
   );
 }

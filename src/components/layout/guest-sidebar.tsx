@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { AddressCard } from "../address/address-card";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,9 +17,21 @@ import {
   Target,
   RotateCcw,
   Move,
+  AlertCircle,
+  CheckCircle2,
+  Compass,
+  Satellite,
+  Wifi,
+  Smartphone,
+  ChevronUp,
+  ChevronDown,
+  BarChart3,
+  Crosshair,
+  RefreshCw,
 } from "lucide-react";
 import { Address } from "@/types/address";
 import { Coordinates } from "@/services/location.service";
+import { cn } from "@/lib/utils";
 
 type GuestSidebarProps = {
   address: Address;
@@ -32,11 +44,9 @@ type GuestSidebarProps = {
   isOpen: boolean;
   onClose: () => void;
   className?: string;
-  // Nouvelles props
-  customStartLocation?: Coordinates | null;
-  onRecalculateFromCurrentLocation?: () => void;
-  onResetStartPoint?: () => void;
   userLocation?: Coordinates | null;
+  locationAccuracy?: number | null;
+  onCenterOnUser?: () => void;
 };
 
 export function GuestSidebar({
@@ -50,333 +60,338 @@ export function GuestSidebar({
   isOpen = true,
   onClose,
   className,
-  customStartLocation,
-  onRecalculateFromCurrentLocation,
-  onResetStartPoint,
   userLocation,
+  locationAccuracy,
+  onCenterOnUser,
 }: GuestSidebarProps) {
   const [dragY, setDragY] = useState(0);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const startYRef = useRef<number | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Auto-expand sur desktop
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth >= 768) {
+      setIsExpanded(true);
+    }
+  }, []);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     startYRef.current = e.touches[0].clientY;
+    setIsDragging(true);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (startYRef.current !== null) {
-      let deltaY = e.touches[0].clientY - startYRef.current;
+      const deltaY = e.touches[0].clientY - startYRef.current;
       if (deltaY > 0) {
-        // Effet de résistance : plus on tire, plus le déplacement diminue
-        const resistance = Math.sqrt(deltaY) * 10;
+        const resistance = Math.min(deltaY, 200); // Limiter le drag à 200px
         setDragY(resistance);
       }
     }
   };
 
   const handleTouchEnd = () => {
-    if (dragY > 120) {
+    setIsDragging(false);
+    if (dragY > 80) {
       onClose();
     }
     setDragY(0);
     startYRef.current = null;
   };
 
-  // Fonction pour formater les coordonnées
-  const formatCoordinates = (coords: Coordinates) => {
-    return `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`;
+  const toggleExpand = () => {
+    setIsExpanded(!isExpanded);
   };
 
-  return (
-    <aside
-      className={`
-        fixed md:block top-[48%] md:top-0 left-0 z-40 w-full h-full md:pt-20 md:w-[30%]
-        bg-white rounded-t-2xl md:rounded-none shadow-lg md:shadow-none
-        transform transition-transform duration-300 ease-out 
-        flex flex-col justify-between
-        ${isOpen ? "translate-y-0" : "translate-y-full md:translate-y-0"}
-        ${className}
-      `}
-      style={{ transform: `translateY(${dragY}px)` }}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      {/* Poignée mobile */}
-      <div className="flex justify-center p-2 md:hidden cursor-grab">
-        <div className="w-16 h-1 bg-gray-300 rounded-full transition-transform duration-200 hover:scale-105"></div>
-      </div>
+  const formatCoordinates = (coords: Coordinates) => {
+    return `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`;
+  };
 
-      {/* Header sticky */}
-      <div className="sticky top-0 z-10 flex items-center justify-between gap-4 p-3 sm:p-4 border-b border-gray-200 bg-white">
-        <div className="flex gap-4 items-center">
-          <MapIcon className="w-5 h-5 text-gray-600" />
-          <h2 className="font-roboto text-base sm:text-lg font-medium text-gray-900">
-            Détails de l'itinéraire
-          </h2>
+  const getAccuracyStatus = (accuracy: number) => {
+    if (accuracy <= 15)
+      return { color: "text-green-600", icon: Crosshair, label: "Excellente" };
+    if (accuracy <= 30)
+      return { color: "text-blue-600", icon: Satellite, label: "Très bonne" };
+    if (accuracy <= 50)
+      return { color: "text-cyan-600", icon: Compass, label: "Bonne" };
+    if (accuracy <= 100)
+      return { color: "text-yellow-600", icon: Wifi, label: "Moyenne" };
+    return { color: "text-orange-600", icon: Smartphone, label: "Faible" };
+  };
+
+  const isLocationAccurate = locationAccuracy && locationAccuracy <= 50;
+
+  const AccuracyIcon = locationAccuracy
+    ? getAccuracyStatus(locationAccuracy).icon
+    : Crosshair;
+
+  return (
+    <>
+      {/* Overlay mobile */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/20 z-30 md:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      <aside
+        className={cn(
+          "fixed md:relative z-40 w-full md:w-96 bg-white shadow-xl md:shadow-none",
+          "flex flex-col transition-all duration-300 ease-out",
+          "md:rounded-l-xl md:border-r md:border-gray-200",
+          "h-[85vh] max-h-[700px] md:h-full", // Hauteur contrôlée
+          isOpen
+            ? "bottom-0 md:translate-x-0"
+            : "-bottom-full md:translate-x-[-100%]",
+          className
+        )}
+        style={{
+          transform: `translateY(${isDragging ? dragY : 0}px)`,
+          touchAction: "none",
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Header avec poignée mobile */}
+        <div className="flex items-center justify-between p-4 mb-4 border-b border-gray-200 bg-white sticky top-0 z-10">
+          <div className="flex items-center gap-3 ">
+            <MapIcon className="w-5 h-5 text-gray-700" />
+            <h2 className="font-semibold text-gray-900 text-sm md:text-base">
+              Itinéraire
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Bouton expand/collapse pour mobile */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleExpand}
+              className="p-1 md:hidden"
+            >
+              {isExpanded ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronUp className="w-4 h-4" />
+              )}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="p-1 md:hidden"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          className="p-2 hover:bg-gray-100 md:hidden"
+        {/* Poignée de drag mobile */}
+        <div className="flex justify-center py-2 md:hidden cursor-grab active:cursor-grabbing">
+          <div className="w-12 h-1 bg-gray-300 rounded-full" />
+        </div>
+
+        {/* Contenu scrollable */}
+        <div
+          ref={contentRef}
+          className={cn(
+            "flex-1 overflow-y-auto px-4 pb-4 transition-all duration-300",
+            "md:max-h-none",
+            isExpanded ? "max-h-[calc(85vh-120px)]" : "max-h-40" // Contrôle hauteur mobile
+          )}
         >
-          <X className="w-4 h-4 text-gray-600" />
-        </Button>
-      </div>
+          {/* Section Position utilisateur */}
+          {userLocation && (
+            <div className="mb-4 p-3 bg-blue-50/50 border border-blue-100 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <LocateFixed className="w-4 h-4 text-blue-600" />
+                <h3 className="text-sm font-medium text-blue-900">
+                  Votre position
+                </h3>
+              </div>
 
-      {/* Contenu scrollable */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4 pb-28">
-        {/* Section Point de départ personnalisé */}
-        {customStartLocation && (
-          <div className="space-y-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <div className="flex items-center gap-2">
-              <Target className="w-4 h-4 text-amber-600" />
-              <h4 className="text-sm font-medium text-amber-800">
-                Point de départ personnalisé
-              </h4>
-            </div>
-            <div className="text-xs text-amber-700 font-mono">
-              📍 {formatCoordinates(customStartLocation)}
-            </div>
-            <div className="flex gap-2">
-              {onRecalculateFromCurrentLocation && (
-                <Button
-                  onClick={onRecalculateFromCurrentLocation}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs h-8 bg-white hover:bg-amber-100 border-amber-300"
-                  disabled={loadingRoute}
-                >
-                  <LocateFixed className="w-3 h-3 mr-1" />
-                  Ma position
-                </Button>
+              <div className="text-xs text-blue-700 font-mono mb-2">
+                {formatCoordinates(userLocation)}
+              </div>
+
+              {locationAccuracy && (
+                <div className="flex items-center gap-2 text-xs mb-2">
+                  <AccuracyIcon className="w-3 h-3" />
+                  <span className={getAccuracyStatus(locationAccuracy).color}>
+                    {Math.round(locationAccuracy)}m •{" "}
+                    {getAccuracyStatus(locationAccuracy).label}
+                  </span>
+                </div>
               )}
-              {onResetStartPoint && (
+
+              {onCenterOnUser && (
                 <Button
-                  onClick={onResetStartPoint}
+                  onClick={onCenterOnUser}
                   variant="outline"
                   size="sm"
-                  className="text-xs h-8 bg-white hover:bg-amber-100 border-amber-300"
+                  className="w-full text-xs h-8 border-blue-200 bg-white hover:bg-blue-50"
                 >
-                  <RotateCcw className="w-3 h-3 mr-1" />
-                  Réinitialiser
+                  <Crosshair className="w-3 h-3 mr-1" />
+                  Centrer la carte
                 </Button>
               )}
             </div>
-          </div>
-        )}
+          )}
 
-        {route ? (
-          <div className="space-y-4 mt-4">
-            {/* Header itinéraire */}
-            <div className="flex items-center gap-2 mb-2">
-              <RouteIcon className="w-5 h-5 text-blue-500" />
-              <h3 className="font-roboto text-base font-semibold text-gray-900">
-                Itinéraire
-              </h3>
-            </div>
+          
 
-            {/* Distance & durée */}
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 text-blue-700 font-medium">
-                <Navigation className="w-4 h-4" />
-                {(route.distance / 1000).toFixed(2)} km
+          {route ? (
+            <div className="space-y-4">
+              {/* Informations itinéraire */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-2 p-3 bg-blue-50/50 border border-blue-100 rounded-lg">
+                  <Navigation className="w-4 h-4 text-blue-600" />
+                  <div>
+                    <div className="text-xs text-gray-600">Distance</div>
+                    <div className="text-sm font-semibold text-blue-800">
+                      {(route.distance / 1000).toFixed(1)} km
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 p-3 bg-purple-50/50 border border-purple-100 rounded-lg">
+                  <Clock className="w-4 h-4 text-purple-600" />
+                  <div>
+                    <div className="text-xs text-gray-600">Durée</div>
+                    <div className="text-sm font-semibold text-purple-800">
+                      {(route.duration / 60).toFixed(0)} min
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-purple-50 text-purple-700 font-medium">
-                <Clock className="w-4 h-4" />
-                {(route.duration / 60).toFixed(0)} min
-              </div>
-            </div>
 
-            {/* Statut suivi */}
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-100">
+              {/* Statut navigation */}
+              <div className="p-3 bg-gray-100/50 border border-gray-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={cn(
+                      "w-2 h-2 rounded-full",
+                      isTrackingEnabled
+                        ? "bg-green-500 animate-pulse"
+                        : "bg-gray-400"
+                    )}
+                  />
+                  <span className="text-xs font-medium">
+                    {isTrackingEnabled
+                      ? "Navigation active"
+                      : "Prêt à naviguer"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Avertissements */}
+              {!isLocationAccurate && userLocation && (
+                <div className="p-3 bg-orange-50/50 border border-orange-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-orange-700">
+                      <p className="font-medium">Précision limitée</p>
+                      <p>Déplacez-vous pour améliorer la précision GPS.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Étapes détaillées (seulement en expanded) */}
+              {isExpanded && route.legs?.[0]?.steps && (
+                <div>
+                  <h4 className="text-xs font-medium text-gray-700 mb-2 flex items-center gap-1">
+                    <ChevronRight className="w-3 h-3" />
+                    Instructions de navigation
+                  </h4>
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {route.legs[0].steps
+                      .slice(0, 8)
+                      .map((step: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className="p-2 text-xs text-gray-600 bg-gray-50/50 rounded border border-gray-100"
+                        >
+                          {step.maneuver.instruction}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Compass className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm text-gray-600 mb-2">Aucun itinéraire</p>
+              <p className="text-xs text-gray-500">
+                Calculez l'itinéraire depuis votre position actuelle
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer avec actions */}
+        <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 space-y-3">
+          {route && (
+            <Button
+              onClick={isTrackingEnabled ? onStopTracking : onStartTracking}
+              variant={isTrackingEnabled ? "outline" : "default"}
+              size="sm"
+              className={cn(
+                "w-full text-sm font-medium",
+                isTrackingEnabled
+                  ? "border-red-300 text-red-700 hover:bg-red-50"
+                  : "bg-green-600 hover:bg-green-700"
+              )}
+              disabled={!isLocationAccurate && !isTrackingEnabled}
+            >
               {isTrackingEnabled ? (
                 <>
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-xs font-medium text-green-700">
-                    Suivi activé
-                  </span>
+                  <LocateOff className="w-4 h-4 mr-2" />
+                  Arrêter
                 </>
               ) : (
                 <>
-                  <div className="w-2 h-2 rounded-full bg-gray-400" />
-                  <span className="text-xs font-medium text-gray-600">
-                    Suivi désactivé
-                  </span>
+                  <Navigation className="w-4 h-4 mr-2" />
+                  Démarrer navigation
                 </>
               )}
-            </div>
-
-            {/* Info interactive */}
-            {!isTrackingEnabled && (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <Move className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-xs text-blue-700">
-                    <p className="font-medium mb-1">💡 Astuce interactive :</p>
-                    <p>
-                      Glissez le point rouge sur la carte pour changer votre
-                      point de départ. L'itinéraire se recalculera
-                      automatiquement !
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Étapes */}
-            {route.legs?.[0]?.steps && (
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-gray-900 flex items-center gap-1 mb-1">
-                  <MapPin className="w-4 h-4 text-gray-600" /> Étapes du trajet
-                </h4>
-                <ul className="max-h-64 overflow-y-auto divide-y divide-gray-200 rounded-lg border border-gray-100">
-                  {route.legs[0].steps.map((step: any, idx: number) => (
-                    <li
-                      key={idx}
-                      className="flex items-center justify-between gap-2 p-2 hover:bg-gray-50"
-                    >
-                      <span className="text-xs text-gray-700">
-                        {step.maneuver.instruction}
-                      </span>
-                      <ChevronRight className="w-3 h-3 text-gray-400" />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Informations de position */}
-            {(userLocation || customStartLocation) && (
-              <div className="space-y-2 p-3 bg-gray-50 rounded-lg">
-                <h4 className="text-sm font-medium text-gray-900">Positions</h4>
-                {userLocation && (
-                  <div className="text-xs text-gray-600">
-                     Position actuelle: {formatCoordinates(userLocation)}
-                  </div>
-                )}
-                {customStartLocation &&
-                  customStartLocation !== userLocation && (
-                    <div className="text-xs text-gray-600">
-                       Point de départ:{" "}
-                      {formatCoordinates(customStartLocation)}
-                    </div>
-                  )}
-                <div className="text-xs text-gray-600">
-                   Destination:{" "}
-                  {address.latitude && address.longitude
-                    ? `${parseFloat(address.latitude as any).toFixed(
-                        4
-                      )}, ${parseFloat(address.longitude as any).toFixed(4)}`
-                    : "Coordonnées non disponibles"}
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center mt-8 px-4 py-6 bg-blue-50 border border-blue-100 rounded-xl">
-            <MapIcon className="w-8 h-8 text-blue-400 mb-2 animate-bounce" />
-            <p className="text-sm sm:text-base text-blue-700 font-medium text-center">
-              Aucun itinéraire généré
-            </p>
-            <p className="text-xs text-blue-500 text-center mt-1">
-              Cliquez sur "Calculer l'itinéraire" pour afficher le trajet depuis
-              votre position.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Footer fixe sur mobile */}
-      <div className="sticky bottom-0 z-20 p-3 sm:p-4 bg-white border-t border-gray-200 md:static md:bg-transparent md:border-none space-y-3">
-        {route && (
-          <>
-            {/* Boutons de contrôle du point de départ */}
-            {customStartLocation && !isTrackingEnabled && (
-              <div className="flex gap-2">
-                {onRecalculateFromCurrentLocation && (
-                  <Button
-                    onClick={onRecalculateFromCurrentLocation}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 text-xs h-9"
-                    disabled={loadingRoute}
-                  >
-                    <LocateFixed className="w-3 h-3 mr-1" />
-                    Ma position
-                  </Button>
-                )}
-                {onResetStartPoint && (
-                  <Button
-                    onClick={onResetStartPoint}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 text-xs h-9"
-                  >
-                    <RotateCcw className="w-3 h-3 mr-1" />
-                    Réinitialiser
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {/* Bouton de suivi */}
-            {isTrackingEnabled ? (
-              <Button
-                onClick={onStopTracking}
-                variant="outline"
-                size="sm"
-                className="flex w-full items-center justify-center gap-2 text-xs sm:text-sm text-gray-900 hover:bg-gray-100"
-              >
-                <LocateOff className="w-4 h-4 text-gray-600" /> Arrêter suivi
-              </Button>
-            ) : (
-              <Button
-                onClick={onStartTracking}
-                variant="outline"
-                size="sm"
-                className="flex w-full items-center justify-center gap-2 text-xs sm:text-sm text-gray-900 hover:bg-gray-100"
-              >
-                <LocateFixed className="w-4 h-4 text-gray-600" /> Suivre
-                position
-              </Button>
-            )}
-          </>
-        )}
-
-        {/* Bouton principal */}
-        <Button
-          onClick={onRecalculate}
-          className="w-full rounded-xl font-semibold text-white flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:shadow-lg"
-          disabled={loadingRoute}
-          size="lg"
-        >
-          {loadingRoute ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" /> Calcul en cours...
-            </>
-          ) : (
-            <>
-              <Navigation className="w-4 h-4" />{" "}
-              {route ? "Recalculer" : "Calculer l'itinéraire"}
-            </>
+            </Button>
           )}
-        </Button>
 
-        {/* Messages d'aide */}
-        {route && (
-          <div className="text-xs text-gray-600 text-center mt-2 space-y-1">
-            {isTrackingEnabled ? (
-              <p>La carte suit automatiquement votre position</p>
-            ) : customStartLocation ? (
-              <p>🎯 Glissez le point rouge pour changer le départ</p>
+          <Button
+            onClick={onRecalculate}
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            disabled={loadingRoute}
+            size="lg"
+          >
+            {loadingRoute ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Calcul...
+              </>
             ) : (
-              <p>Activez le suivi pour suivre vos déplacements</p>
+              <>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                {route ? "Recalculer" : "Calculer l'itinéraire"}
+              </>
             )}
-          </div>
-        )}
-      </div>
-    </aside>
+          </Button>
+
+          {/* Info précision */}
+          {!isLocationAccurate && !isTrackingEnabled && (
+            <div className="text-xs text-orange-600 text-center flex items-center justify-center gap-1">
+              <AlertCircle className="w-3 h-3" />
+              Précision GPS insuffisante
+            </div>
+          )}
+        </div>
+      </aside>
+    </>
   );
 }

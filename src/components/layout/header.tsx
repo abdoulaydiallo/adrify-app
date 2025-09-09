@@ -66,7 +66,7 @@ export const Header = () => {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 h-16 sm:h-20 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/50">
+      <header className="static top-0 left-0 right-0 h-16 sm:h-20 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/50">
         <div className="h-full flex items-center justify-between px-4 sm:px-6 lg:px-8 max-w-9xl mx-auto">
           {/* Logo Section */}
           <div
