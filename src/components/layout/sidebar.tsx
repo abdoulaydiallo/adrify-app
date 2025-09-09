@@ -49,7 +49,7 @@ export function Sidebar({
           transform transition-all duration-500 ease-in-out
           ${
             isOpen
-              ? "top-[30%] opacity-100 md:top-18 md:opacity-100"
+              ? "top-[35%] opacity-100 md:top-18 md:opacity-100"
               : "top-[100%] opacity-0 md:top-18 md:opacity-100"
           }
           ${className}
