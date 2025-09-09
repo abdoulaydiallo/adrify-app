@@ -12,7 +12,7 @@ export default function DashboardLayout({
   <Header />
 
   {/* Zone contenu qui prend le reste de l’écran */}
-  <div className="flex-1 max-h-[90vh] overflow-hidden">
+  <div className="flex-1 max-h-[90vh] overflow-auto">
     {children}
   </div>
 </div>
