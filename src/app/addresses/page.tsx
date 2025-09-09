@@ -145,9 +145,9 @@ export default function DashboardPage() {
         >
           <Map className="w-4 sm:w-5 h-4 sm:h-5 text-gray-700" />
         </Button>
-        
+
         <Button
-          onClick={() => router.push("/dashboard/addresses/new")}
+          onClick={() => router.push("/addresses/new")}
           className="h-12 w-12 sm:h-10 sm:w-10 md:h-11 md:w-11 rounded-full bg-blue-600 shadow-lg hover:bg-blue-700 transition-all duration-300"
         >
           <Plus className="w-4 sm:w-5 h-4 sm:h-5 text-white" />
@@ -169,18 +169,17 @@ export default function DashboardPage() {
         onSelect={(addr) => setSelectedAddress(addr)}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
-        
       />
 
       {/* Map Container */}
-      <div className="flex-1 relative mt-4">
+      <div className="flex-1 h-[89vh] overflow-hidden relative">
         <Mapbox
           ref={mapRef}
           addresses={addresses as any}
           center={mapCenter}
           zoom={mapZoom}
           selectedAddress={selectedAddress}
-          className="h-full w-full"
+          className="absolute inset-0"
         />
 
         {/* Mobile Selected Address Info */}

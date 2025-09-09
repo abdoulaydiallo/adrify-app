@@ -79,8 +79,8 @@ export function SignInForm() {
         </div>,
         { duration: 2000 }
       );
-      console.log("Redirection vers /dashboard");
-      router.push("/dashboard");
+      console.log("Redirection vers /addresses");
+      router.push("/addresses");
     } catch (error) {
       console.error("Erreur de connexion :", error);
       if (ServiceError.isServiceError(error)) {

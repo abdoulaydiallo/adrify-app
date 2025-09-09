@@ -268,7 +268,7 @@ export function AddressForm({
           });
 
       toast.success(isUpdate ? "Adresse mise à jour !" : "Adresse créée !");
-      router.push("/dashboard");
+      router.push("/addresses");
 
       if (!isUpdate) {
         form.reset();

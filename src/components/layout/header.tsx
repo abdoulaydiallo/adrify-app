@@ -71,7 +71,7 @@ export const Header = () => {
           {/* Logo Section */}
           <div
             className="flex items-center gap-2 sm:gap-4 cursor-pointer group flex-shrink-0"
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push("/addresses")}
           >
             <div className="relative">
               <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-blue-600 via-purple-600 to-indigo-600 flex items-center justify-center group-hover:scale-105 transition-all duration-300">
@@ -151,7 +151,7 @@ export const Header = () => {
               <>
                 {/* Create Address Button - Hidden on small screens */}
                 <button
-                  onClick={() => router.push("/dashboard/addresses/new")}
+                  onClick={() => router.push("/addresses/new")}
                   className="hidden lg:flex group px-5 py-2.5 cursor-pointer rounded-xl font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 hover:scale-105 items-center gap-2"
                 >
                   <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
@@ -160,7 +160,7 @@ export const Header = () => {
 
                 {/* Plus button for medium screens */}
                 <button
-                  onClick={() => router.push("/dashboard/addresses/new")}
+                  onClick={() => router.push("/addresses/new")}
                   className="lg:hidden p-2.5 cursor-pointer rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 hover:scale-105"
                 >
                   <Plus className="w-4 h-4 text-white" />
@@ -198,22 +198,16 @@ export const Header = () => {
                         {[
                           {
                             icon: Home,
-                            label: "Dashboard",
-                            url: "/dashboard",
+                            label: "Mes Adresses",
+                            url: "/addresses",
                             color: "text-blue-600",
                           },
                           {
                             icon: User,
-                            label: "Profil",
-                            url: "/dashboard/user",
+                            label: "Mon Profil",
+                            url: "/users/profile",
                             color: "text-purple-600",
-                          },
-                          {
-                            icon: Settings,
-                            label: "Paramètres",
-                            url: "/dashboard/settings",
-                            color: "text-slate-600",
-                          },
+                          }
                         ].map((item, index) => (
                           <button
                             key={index}
@@ -335,7 +329,7 @@ export const Header = () => {
                 <div className="space-y-2">
                   <button
                     onClick={() => {
-                      router.push("/dashboard/addresses/new");
+                      router.push("/addresses/new");
                       setIsMobileMenuOpen(false);
                     }}
                     className="w-full flex items-center gap-3 px-3 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
@@ -347,21 +341,15 @@ export const Header = () => {
                   {[
                     {
                       icon: Home,
-                      label: "Dashboard",
-                      url: "/dashboard",
+                      label: "Mes addresses",
+                      url: "/addresses",
                       color: "text-blue-600",
                     },
                     {
                       icon: User,
-                      label: "Profil",
-                      url: "/dashboard/user",
+                      label: "Mon profil",
+                      url: "/users/profile",
                       color: "text-purple-600",
-                    },
-                    {
-                      icon: Settings,
-                      label: "Paramètres",
-                      url: "/dashboard/settings",
-                      color: "text-slate-600",
                     },
                   ].map((item, index) => (
                     <button

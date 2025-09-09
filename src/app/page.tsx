@@ -115,7 +115,7 @@ export default function AdrifyLanding() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <Link href="/dashboard/addresses/new">
+          <Link href="/addresses/new">
             <Button className="group bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-full shadow-lg hover:scale-105 flex items-center gap-2">
               <MapPin className="w-5 h-5 group-hover:rotate-12 transition-transform duration-200" />
               Créer mon adresse

@@ -14,7 +14,7 @@ import { LocationService, Coordinates } from "@/services/location.service";
 import { RouteService } from "@/services/route.service";
 import { toast } from "sonner";
 
-export default function GuestDashboard() {
+export default function A() {
   const params = useParams();
   const code = params?.code as string;
 

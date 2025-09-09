@@ -86,7 +86,7 @@ export function AddressCard({
       const code = address?.share_link.split("/").pop();
       if (!code) return;
 
-      const url = window.location.origin + "/dashboard/" + code;
+      const url = window.location.origin + "/addresses/" + code;
 
       if (navigator.share) {
         try {
@@ -116,7 +116,7 @@ export function AddressCard({
     const code = address.share_link.split("/").pop();
     if (!code) return;
 
-    router.push(`/dashboard/${code}`);
+    router.push(`/addresses/${code}`);
   };
 
   const handleNavigate = (e: React.MouseEvent) => {
@@ -318,7 +318,6 @@ export function AddressCard({
               ? "En attente"
               : "Rejetée"}
           </Badge>
-          {address.status && <Badge variant="outline">{address.status}</Badge>}
           <Badge variant="outline">
             {new Date(address.created_at).toLocaleDateString("fr-FR")}
           </Badge>
