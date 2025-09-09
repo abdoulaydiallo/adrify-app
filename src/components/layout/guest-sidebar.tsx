@@ -89,7 +89,7 @@ export function GuestSidebar({
   return (
     <aside
       className={`
-        fixed md:block top-[52%] md:top-0 left-0 z-40 w-full h-full md:pt-20 md:w-[30%]
+        fixed md:block top-[48%] md:top-0 left-0 z-40 w-full h-full md:pt-20 md:w-[30%]
         bg-white rounded-t-2xl md:rounded-none shadow-lg md:shadow-none
         transform transition-transform duration-300 ease-out 
         flex flex-col justify-between
